@@ -75,3 +75,13 @@ def extract_name(text: str):
 def extract_mood(text: str):
     m = re.search(r"\b([1-9]|10)\b", text)
     return int(m.group(1)) if m else None
+
+@app.get("/healthz")
+def healthz():
+    # mismo resultado que /health
+    return {"ok": True, "service": "ai"}
+
+@app.post("/generate", response_model=ChatOut)
+def generate(payload: ChatIn):
+    # reutiliza la lógica actual de /chat
+    return chat(payload)
