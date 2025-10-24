@@ -221,6 +221,7 @@ app.MapGet("/mood", [Authorize] async (AppDb db, ClaimsPrincipal cp, Guid? conve
     return Results.Ok(items);
 });
 
+app.MapGet("/health", () => Results.Ok(new { ok = true, service = "api" }));
 
 app.Run();
 
