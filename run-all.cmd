@@ -2,7 +2,7 @@
 setlocal
 set mode=%1
 
-echo Iniciando entorno AURA (%mode%)...
+echo Iniciando AURA (%mode%)...
 
 start powershell -NoExit -Command ".\start-api.ps1"
 start powershell -NoExit -Command ".\start-ai.ps1"

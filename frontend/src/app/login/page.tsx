@@ -61,15 +61,15 @@ export default function LoginPage() {
       <div className="w-full max-w-sm border rounded-2xl p-5 space-y-3">
         <h1 className="text-xl font-semibold text-center">Iniciar sesión</h1>
         <input
-          className="w-full border rounded px-3 py-2"
+          className="w-full rounded-xl border border-brand-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
           value={email}
-          onChange={e=>setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           placeholder="email"
         />
         <input
-          className="w-full border rounded px-3 py-2"
+          className="w-full rounded-xl border border-brand-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
           value={pwd}
-          onChange={e=>setPwd(e.target.value)}
+          onChange={e => setPwd(e.target.value)}
           type="password"
           placeholder="contraseña"
         />

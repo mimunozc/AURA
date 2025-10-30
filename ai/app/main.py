@@ -15,24 +15,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# -----------------------------
+# MODELOS
+# -----------------------------
 class Msg(BaseModel):
-    role: Literal["user","assistant"]
+    role: Literal["user", "assistant"]
     content: str
 
 class ChatIn(BaseModel):
     system: Optional[str] = None
-    history: Optional[List[dict]] = None
+    history: Optional[List[Msg]] = None
     user: str
     followup: Optional[str] = None
 
-class ChatOut(BaseModel):
-    reply: str
 
+# -----------------------------
+# HELPERS
+# -----------------------------
 def _normalize(t: str) -> str:
     x = unicodedata.normalize("NFD", t)
     x = "".join(ch for ch in x if unicodedata.category(ch) != "Mn")
     x = x.lower().strip()
-    x = re.sub(r"\s+"," ",x)
+    x = re.sub(r"\s+", " ", x)
     return x
 
 def _system_prompt() -> str:
@@ -42,32 +46,41 @@ def _system_prompt() -> str:
         "Si hay riesgo, sugiere buscar ayuda inmediata de un adulto de confianza o emergencia."
     )
 
+# -----------------------------
+# LLAMAR A OPENAI
+# -----------------------------
 async def _call_openai(message: str, history: List[Msg], system: Optional[str]) -> str:
-    api_key = os.getenv("OPENAI_API_KEY","")
-    model = os.getenv("OPENAI_MODEL","gpt-4o-mini")
-    if not api_key:
-        return ""
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+    if not api_key:
+        # si no hay key, devolvemos un mensaje visible para el front
+        return "⚠️ El servicio AURA no tiene configurada la variable OPENAI_API_KEY."
+
+    # armamos el historial en formato OpenAI
     msgs = []
     sys = system or _system_prompt()
-    msgs.append({"role":"system","content":sys})
-    for m in history:
-        if m.role in ("user","assistant"):
-            msgs.append({"role":m.role,"content":m.content})
-    msgs.append({"role":"user","content":message})
+    msgs.append({"role": "system", "content": sys})
+    for m in history or []:
+        if m.role in ("user", "assistant"):
+            msgs.append({"role": m.role, "content": m.content})
+    msgs.append({"role": "user", "content": message})
 
-    headers = {"Authorization":f"Bearer {api_key}","Content-Type":"application/json"}
-    body = {"model":model,"messages":msgs}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    body = {"model": model, "messages": msgs}
     url = "https://api.openai.com/v1/chat/completions"
 
     max_attempts = 4
     backoff = 1.5
 
     async with httpx.AsyncClient(timeout=120.0) as client:
-        for attempt in range(1, max_attempts+1):
+        for attempt in range(1, max_attempts + 1):
             try:
-                r = await client.post(url, json=body, headers=headers)
-                if r.status_code == 429:
+                r = await client.post(url, headers=headers, json=body)
+                if r.status_code == 429 and attempt < max_attempts:
                     retry_after = r.headers.get("Retry-After")
                     wait_s = float(retry_after) if retry_after else backoff ** attempt
                     print(f"OpenAI 429. Waiting {wait_s:.1f}s before retry {attempt}/{max_attempts}...")
@@ -82,16 +95,16 @@ async def _call_openai(message: str, history: List[Msg], system: Optional[str]) 
                     print(f"OpenAI {e.response.status_code}. Retrying in {wait_s:.1f}s...")
                     await asyncio.sleep(wait_s)
                     continue
-                raise
-            except Exception:
-                if attempt < max_attempts:
-                    wait_s = backoff ** attempt
-                    await asyncio.sleep(wait_s)
-                    continue
-                raise
+                # error no recuperable
+                print("OpenAI error:", e)
+                return "⚠️ No pude obtener respuesta de OpenAI en este momento."
+            except Exception as e:
+                print("OpenAI unexpected error:", e)
+                return "⚠️ Ocurrió un error al contactar la IA."
 
-    return ""
-
+# -----------------------------
+# LLAMAR A OLLAMA (lo dejamos por si vuelves)
+# -----------------------------
 async def _call_ollama(message: str, history: List[Msg], system: Optional[str]) -> str:
     base = os.getenv("OLLAMA_URL", "http://localhost:11434")
     model = os.getenv("OLLAMA_MODEL", "phi3")
@@ -100,77 +113,65 @@ async def _call_ollama(message: str, history: List[Msg], system: Optional[str]) 
     msgs = []
     sys = system or _system_prompt()
     msgs.append({"role": "system", "content": sys})
-    for m in history:
-        if m.role in ("user","assistant"):
+    for m in history or []:
+        if m.role in ("user", "assistant"):
             msgs.append({"role": m.role, "content": m.content})
     msgs.append({"role": "user", "content": message})
 
     body = {"model": model, "messages": msgs, "stream": False}
 
     async with httpx.AsyncClient(timeout=300.0) as client:
-        r = await client.post(url, json=body)
-        r.raise_for_status()
-        data = r.json()
-        return (data.get("message") or {}).get("content", "").strip()
+        try:
+            r = await client.post(url, json=body)
+            r.raise_for_status()
+            data = r.json()
+            return data.get("message", {}).get("content", "").strip() or "Ok."
+        except Exception as e:
+            print("Ollama error:", e)
+            return "⚠️ No pude contactar al modelo local."
 
-
+# -----------------------------
+# ENDPOINTS
+# -----------------------------
 @app.get("/health")
 def health():
-    return {"status":"ok"}
+    return {"status": "ok"}
 
 @app.get("/")
 def root():
-    return {"service":"aura-ai","status":"ok"}
+    return {"service": "aura-ai", "status": "ok"}
 
 def _model_banner() -> str:
-    p = os.getenv("MODEL_PROVIDER", "ollama").lower()
+    p = os.getenv("MODEL_PROVIDER", "openai").lower()  # 👈 AHORA OPENAI POR DEFECTO
     if p == "openai":
         return f"provider: openai | model: {os.getenv('OPENAI_MODEL','gpt-4o-mini')}"
-    return f"provider: ollama | model: {os.getenv('OLLAMA_MODEL','llama3.1')} | base: {os.getenv('OLLAMA_URL','http://localhost:11434')}"
+    return f"provider: ollama | model: {os.getenv('OLLAMA_MODEL','llama3')}"
 
-print("AURA-AI using", _model_banner())
-
-@app.post("/chat", response_model=ChatOut)
+@app.post("/chat")
 async def chat(payload: ChatIn):
-    user_msg = payload.user.strip()
-    if not user_msg:
-        return ChatOut(reply="Te leo. Si te sirve, cuéntame un poco más.")
+    user_msg = payload.user
+    history = payload.history or []
+    system = payload.system
 
-    hist = [Msg(role=(m.get("role") or "user"), content=(m.get("content") or "")) for m in (payload.history or [])]
+    provider = os.getenv("MODEL_PROVIDER", "openai").lower()  # 👈 AHORA OPENAI POR DEFECTO
 
-    try:
-        print("🔹 Intentando OpenAI...")
-        ans = await _call_openai(user_msg, hist, payload.system)
-        if ans:
-            return ChatOut(reply=ans)
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 429:
-            print(" Límite de tasa en OpenAI, cambiando a Ollama...")
-        else:
-            print(f" Error HTTP {e.response.status_code} con OpenAI, usando Ollama...")
-    except Exception as e:
-        print(f" Error en OpenAI: {e}, usando Ollama...")
+    if provider == "openai":
+        reply = await _call_openai(user_msg, history, system)
+    else:
+        reply = await _call_ollama(user_msg, history, system)
 
-    try:
-        print("🔹 Intentando Ollama (fallback)...")
-        ans = await _call_ollama(user_msg, hist, payload.system)
-        if ans:
-            return ChatOut(reply=ans + "\n\n(Pasé al modelo local por límite de solicitudes o error en red.)")
-    except Exception as e:
-        print(f" Falla también en Ollama: {e}")
-        return ChatOut(reply="No pude conectar con ningún modelo por ahora. ¿Intentamos más tarde?")
+    return {"reply": reply, "provider": provider}
 
-    return ChatOut(reply="El modelo no devolvió respuesta. Probemos de nuevo.")
-
-
+# -----------------------------
+# WARMUP
+# -----------------------------
 @app.on_event("startup")
 async def warmup():
-    if os.getenv("AURA_SKIP_WARMUP","0") == "1":
-        print("Warm-up skipped by env.")
+    if os.getenv("AURA_SKIP_WARMUP", "false").lower() == "true":
         return
     print("Warming up model, please wait...")
-    p = os.getenv("MODEL_PROVIDER", "ollama").lower()
-    tries = 1  
+    p = os.getenv("MODEL_PROVIDER", "openai").lower()  # 👈 AHORA OPENAI POR DEFECTO
+    tries = 1
     for i in range(tries):
         try:
             if p == "openai":

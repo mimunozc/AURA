@@ -13,11 +13,13 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Aura.WebApi.Diary;
-using System.Linq; 
+using System.Linq;
 
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -132,46 +134,79 @@ app.MapPost("/auth/login", async (AppDb db, LoginDto dto) =>
     return Results.Ok(new { token = jwt });
 });
 
-app.MapPost("/chat/start", [Authorize] async (AppDb db, ClaimsPrincipal cp) =>
+app.MapPost("/chat/start", async (AppDb db) =>
 {
-    var uid = Guid.Parse(cp.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    var c = new Conversation { UserId = uid };
+
+    var firstUser = await db.Users
+        .OrderBy(x => x.CreatedAt)   
+        .FirstOrDefaultAsync();
+
+    var c = new Conversation();
+
+    if (firstUser != null)
+    {
+        c.UserId = firstUser.Id; 
+    }
+
     db.Conversations.Add(c);
     await db.SaveChangesAsync();
+
     return Results.Ok(new { conversationId = c.Id });
 });
 
-app.MapPost("/chat/send", [Authorize] async (
+
+
+app.MapPost("/chat/send", async (
     AppDb db,
     IConfiguration cfg,
     HttpClient http,
-    ClaimsPrincipal cp,
-    Guid conversationId,
-    string message) =>
+    ChatSendIn input
+    ) =>
 {
-    var conv = await db.Conversations.FindAsync(conversationId);
-    if (conv == null) return Results.NotFound("Conversación no existe.");
+    // 1. datos desde el body
+    var conversationId = input.conversationId;
+    var message = input.message;
 
-    // Guardar mensaje del usuario
-    db.Messages.Add(new Message { ConversationId = conversationId, Role = "user", Text = message });
-    await db.SaveChangesAsync();
-
-    // Llamar servicio de IA
-    var aiBase = cfg["Ai:BaseUrl"] ?? "http://localhost:8000";
-    var aiRes = await http.PostAsJsonAsync($"{aiBase}/generate", new
+    // 2. guardamos el mensaje del usuario
+    db.Messages.Add(new Message
     {
-        user_id = cp.FindFirstValue(ClaimTypes.NameIdentifier),
-        message
+        ConversationId = conversationId,
+        Role = "user",
+        Text = message
     });
-    if (!aiRes.IsSuccessStatusCode) return Results.Problem("Error en servicio AI");
-
-    var payload = await aiRes.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-    var reply = payload?["reply"] ?? "";
-
-    // Guardar respuesta del asistente
-    db.Messages.Add(new Message { ConversationId = conversationId, Role = "assistant", Text = reply });
     await db.SaveChangesAsync();
 
+    // 3. llamamos al servicio de IA (FastAPI)
+    var aiBase = cfg["Ai:BaseUrl"] ?? "http://localhost:8002";
+    // nuestro FastAPI expone POST /chat con { user, history }
+    var aiRes = await http.PostAsJsonAsync($"{aiBase}/chat", new
+    {
+        user = message,
+        history = Array.Empty<object>() // luego puedes enviar historial
+    });
+
+    if (!aiRes.IsSuccessStatusCode)
+    {
+        // para que puedas verlo en el front
+        var err = await aiRes.Content.ReadAsStringAsync();
+        Console.WriteLine($"AI error: {err}");
+        return Results.Problem("Error en servicio AI");
+    }
+
+    // 4. leemos la respuesta del servicio de IA
+    var payload = await aiRes.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+    var reply = payload?["reply"] ?? "No pude responder ahora.";
+
+    // 5. guardamos la respuesta del asistente
+    db.Messages.Add(new Message
+    {
+        ConversationId = conversationId,
+        Role = "assistant",
+        Text = reply
+    });
+    await db.SaveChangesAsync();
+
+    // 6. devolvemos al frontend
     return Results.Ok(new { reply });
 });
 
@@ -225,4 +260,4 @@ app.MapGet("/health", () => Results.Ok(new { ok = true, service = "api" }));
 
 app.Run();
 
-
+public record ChatSendIn(Guid conversationId, string message);
