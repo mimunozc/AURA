@@ -1,4 +1,16 @@
 @echo off
-start powershell -NoLogo -NoExit -ExecutionPolicy Bypass -File "%~dp0start-api.ps1"
-start powershell -NoLogo -NoExit -ExecutionPolicy Bypass -File "%~dp0start-ai.ps1"
-start powershell -NoLogo -NoExit -ExecutionPolicy Bypass -File "%~dp0start-frontend.ps1"
+setlocal
+set mode=%1
+
+echo Iniciando entorno AURA (%mode%)...
+
+start powershell -NoExit -Command ".\start-api.ps1"
+start powershell -NoExit -Command ".\start-ai.ps1"
+
+if "%mode%"=="lan" (
+    start powershell -NoExit -Command ".\start-frontend.ps1 lan"
+) else (
+    start powershell -NoExit -Command ".\start-frontend.ps1"
+)
+
+endlocal

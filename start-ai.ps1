@@ -1,15 +1,12 @@
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-Set-Location -Path (Join-Path $ScriptDir 'ai')
+Set-StrictMode -Version Latest
+$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location "$root"
 
-if (-not (Test-Path .\.venv\Scripts\Activate.ps1)) { python -m venv .venv }
+if (!(Test-Path .venv)) { python -m venv .venv }
 . .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 
-$env:MODEL_PROVIDER = 'openai'
-$env:OPENAI_API_KEY = 'API_KEY'
-$env:OPENAI_MODEL = 'gpt-4o-mini'
+$env:OPENAI_API_KEY = $env:OPENAI_API_KEY
+$env:OPENAI_MODEL  = "gpt-3.5-turbo"
 
-$env:OLLAMA_URL = 'http://localhost:11434'
-$env:OLLAMA_MODEL = 'phi3'
-
-if (-not (Get-Command uvicorn -ErrorAction SilentlyContinue)) { pip install -r requirements.txt }
-uvicorn app.main:app --reload --port 8002
+uvicorn app.main:app --host 0.0.0.0 --port 8002

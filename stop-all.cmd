@@ -1,4 +1,7 @@
 @echo off
-taskkill /f /im dotnet.exe >nul 2>&1
-taskkill /f /im python.exe >nul 2>&1
-taskkill /f /im node.exe >nul 2>&1
+echo Deteniendo procesos AURA...
+taskkill /F /IM dotnet.exe >nul 2>&1
+taskkill /F /IM python.exe >nul 2>&1
+taskkill /F /IM node.exe >nul 2>&1
+echo Listo.
+pause
