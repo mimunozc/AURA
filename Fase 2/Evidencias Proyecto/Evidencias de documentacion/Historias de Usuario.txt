@@ -1,0 +1,80 @@
+Historias de Usuario
+Check-in emocional diario
+
+Como usuario,
+
+quiero que Aura me pregunte cómo me siento cada día,
+
+para llevar un registro de mis emociones y notar cambios en mi bienestar.
+
+Tono personalizable
+
+Como usuario,
+
+quiero elegir el tono de la conversación de Aura (amigo, compañero reflexivo, hermano mayor),
+
+para sentirme más cómodo y acompañado de una forma que se adapte a mi estilo.
+
+Diario emocional guiado
+
+Como usuario,
+
+quiero que Aura me ayude a escribir sobre mis experiencias del día,
+
+para poder reflexionar y entender mejor mis emociones.
+
+Detección de patrones
+
+Como usuario,
+
+quiero que Aura identifique patrones de estrés, tristeza o cambios bruscos en mi estado emocional,
+
+para saber cuándo algo puede estar afectando mi bienestar.
+
+Sugerencias prácticas
+
+Como usuario,
+
+quiero que Aura me sugiera pequeñas actividades o pausas,
+
+para aliviar momentos de estrés o ansiedad.
+
+Recordatorios suaves
+
+Como usuario,
+
+quiero recibir notificaciones amables cuando no he registrado mis emociones por varios días,
+
+para mantener el hábito sin sentir presión.
+
+Panel personal de bienestar
+
+Como usuario,
+
+quiero ver un resumen visual de mi estado emocional a lo largo del tiempo,
+
+para entender mi progreso y reconocer tendencias.
+
+Acompañamiento en momentos difíciles
+
+Como usuario,
+
+quiero que Aura me acompañe en una conversación cuando me siento mal,
+
+para no sentirme solo y poder expresar lo que me pasa.
+
+Recomendación de ayuda profesional
+
+Como usuario,
+
+quiero que Aura me sugiera recursos confiables o líneas de apoyo cuando mi estado emocional lo requiera,
+
+para recibir orientación segura sin sentirme juzgado.
+
+Confidencialidad y seguridad
+
+Como usuario,
+
+quiero saber que mis conversaciones y registros son privados,
+
+para sentirme seguro expresándome con honestidad.

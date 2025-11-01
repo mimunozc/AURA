@@ -1,0 +1,131 @@
+Elicitaciones
+
+ENCUESTAS
+
+50%= Usuarios y no Usuarios.
+37,5% = Personas del ámbito de la salud.
+12,5% = Ámbito Psicológico.
+
+Respuestas destacadas:
+Usuario No Usuario:
+ 1- ¿Qué esperas obtener al utilizar AURA en tu vida diaria?  
+
+R1: Creo que obtener un apoyo seguro, algo que sepa que esta ahí siempre para responder y apoyar sin necesidad de cohibirme ni avergonzarme por expresarlo.
+
+R2: Probablemente un acompañamiento constante acerca de mi estado de ánimo diario.
+
+2 - ¿Qué tipo de apoyo emocional te gustaría recibir de una inteligencia artificial?
+
+R1: me gustaría ver lo que entrega, pero probablemente un apoyo a momentos de ansiedad o angustia que es lo más común, algo que pueda servir de guía en momento de crisis.
+
+R2: Me gustaría que pudiera apoyarme a través de consejos, ideas, planes o información sobre mi estado de ánimo/ bienestar emocional.
+
+R3: consejos de cómo poder manejar mis emociones.
+
+3 - ¿Con qué frecuencia estarías dispuesto(a) a interactuar con la aplicación?
+
+R1: depende que tan buena sea; si resultará ser buena en más de un aspecto de apoyo emocional entonces constantemente, en cambio, si solo fuera para crisis y ocasiones de angustia extrema supongo que de vez en cuando.
+
+R2: diariamente.
+
+R3: Una vez a la semana.
+
+4 - ¿Te gustaría que AURA adaptara sus respuestas según tu estado de ánimo?
+
+R1: si, creo que serviría además de adaptarse a la personalidad de los usuarios, debido a que eso podría hacer aún más grata la experiencia
+
+R2: Sí, me gustaría que si mi estado de ánimo estuviera decaído, la aplicación pudiera responder con mayor consideración y viceversa teniendo en cuenta la vulnerabilidad a la que nos exponemos.
+
+5 - ¿Qué nivel de privacidad consideras importante para tus conversaciones con AURA?
+
+R1: casi completa, ya que aunque es de apoyo emocional lo que debería considerarse privado y AURA una zona segura, creo que no sería correcto que la privacidad fuera total, ya que si alguien admitiera un delito ya sea ocasionado o recibido por la misma, estaría dejando de tener una funcionalidad segura y saludable. Al igual que si alguien llegara anunciar algo grave como por ejemplo comentar que quiere matarse, tal vez eso deba advertir o algo que pueda proteger a los usuarios, aún si ellos no quieren, ya que parece ser esa la función de la aplicación.
+
+R2: Protección de datos y cifrado de extremo a extremo.
+
+Respuestas destacadas:
+Ambiente Medico:
+1 -  ¿Qué tipo de información del paciente sería útil para complementar su atención médica desde AURA?
+R1: Información personal (nombre, edad, género) , de contacto (Mail, teléfono, tutor/apoderado en caso de pacientes jóvenes) antecedentes (atención psiquiatría o psicología con diagnóstico).
+
+R2: Sus historial/antecedentes médicos, farmacológicos, familiares (no del todo obligatorios), etx.
+
+2 - ¿Cómo podría la aplicación ayudar a detectar signos tempranos de estrés, ansiedad o depresión?
+R1: Mediante la conversación se pueden detectar síntomas y patrones recurrentes con preguntas que permitan al usuario “descargarse”.
+
+R2:Con escuchar la voz del paciente.
+
+R3: Dándole una lista de opciones (cerrada tal vez) de signos y síntomas de aquellas enfermedades o cuadros para tener una noción a lo que se enfrenta.
+
+
+3 - ¿Qué tipo de alertas te gustaría recibir en caso de detectar un riesgo emocional o físico en el usuario?
+R1: Si pudiera de alguna manera extender con ayuda a profesionales certificados que estén ligados con AURA cuando ya se sepa que hay un riesgo mayor que atente con la vida del usuario.
+
+R2: Alguna alerta que te indique que estás en riesgo y te anime a buscar apoyo de alguna clase o a tomarte un tiempo para parar y respirar.
+
+
+4 -  ¿Qué grado de integración consideras apropiado entre AURA y los sistemas médicos existentes?
+R1: Debiera ser un complemento, una herramienta para el día a día y en caso de empeegencia, en ningún momento debiera ser un reemplazo de la terapia. Se debería explicitar eso al momento de la inscripción y comentar los riesgos de generar una relación de dependencia.
+
+R2: Que tuviesen conexión con el sistema de registro/ficha clínica en la cual pueda poner notas u observaciones.
+
+
+5 - ¿Estarías dispuesto(a) a incluir tu número de contacto en la aplicación para recibir alertas automáticas cuando un usuario presente un posible riesgo emocional o físico? 
+R1: Creo que tiene su lado bueno y malo. Pero considero que no sería bueno alertar sobre estos patrones, si creo que debiera alertar a las familias quizás incluir un contacto de emergencia en el formulario de inscripción. Pero no considero que sea bueno para el profesional recibir alertas ya que eso podría condicionar el criterio clínico y profesional.
+
+R2: Por supuesto, a menos que hayan “turnos” de profesionales el cual estén dispuesto a atender.
+
+
+Respuestas destacadas:
+Ambiente Psicológico:
+1 - Cómo podría AURA complementar tu labor terapéutica con los pacientes?
+
+R1: Enviándole señales de que sería bueno contactarse con el psicólogo para recibir ayuda.
+
+2 -  ¿Qué tipo de datos o reportes te gustaría recibir de la aplicación (por ejemplo, estados de ánimo, frecuencia de interacción, palabras clave, etc.)?
+
+R1: Cuando la persona siente que ya no puede con la situación ella misma.
+
+3 - ¿Qué precauciones consideras necesarias para proteger la información emocional de los usuarios?
+
+R1: Instándole a que busque ayuda de un profesional cuando la aplicación le indique que es momento de y entregándole respuestas acordé a lo que se está solicitando.
+
+4 - ¿De qué manera te gustaría intervenir o supervisar las respuestas automáticas de AURA?
+
+R1: Estando sincronizado con la información que manejo de sus datos y poder estar al pendiente.
+
+5 - ¿Estarías dispuesto(a) a agregar tu número de contacto profesional en la aplicación, para que AURA te notifique cuando un usuario muestre signos emocionales preocupantes?
+
+R1: Todo depende del tipo de paciente con el que se esté tratando.
+
+
+Links de referencia de encuestas
+| Indicador                                                                     | Porcentaje / cifra                                                                                     | Fuente (link)                                                                       | Año / periodo |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- | ------------- |
+| Prevalencia de depresión en adultos mayores de 18 años en Chile               | **6,2%**                                                                                               | “Factores asociados a depresión … ENS 2016-2017” (Rev. Méd. Chile) ([scielo.cl][1]) | 2016-2017     |
+| (Sólo referencia indirecta) Porcentaje que reporta tratamiento vs prevalencia | Menos del **50%** de quienes tienen depresión consultan y reciben ayuda. ([septiembreamarillo.com][2]) | 2017 (según ENS)                                                                    |               |
+
+[1]: https://www.scielo.cl/scielo.php?pid=S0034-98872021001001430&script=sci_arttext&utm_source=chatgpt.com "Factores asociados a depresión en población chilena. Resultados ..."
+[2]: https://www.septiembreamarillo.com/assets/infografias/infografias_SepAm_CHILE_v2.pdf?utm_source=chatgpt.com "[PDF] Depresión en Cifras - Septiembre amarillo"
+
+
+| Indicador                                                           | Porcentaje / cifra | Fuente (link)                                                                                                                                | Año / periodo |
+| ------------------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Adultos mayores con soledad no deseada                              | **49,2%**          | “Soledad No Deseada y Aislamiento Social en la Vejez…” (Observatorio del Envejecimiento UC‑Confuturo) ([Pontificia Universidad Católica][1]) | 2025          |
+| Adultos mayores con alto riesgo de aislamiento social               | **55% (≈ 55,5%)**  | Mismo estudio del Observatorio ([La Tercera][2])                                                                                             | 2025          |
+| Adultos mayores que experimentan tanto soledad + aislamiento social | **30,7%**          | Mismo estudio del Observatorio ([Pontificia Universidad Católica][1])                                                                        | 2025          |
+
+[1]: https://www.uc.cl/noticias/soledad-no-deseada-casi-la-mitad-de-la-poblacion-mayor-declara-sentirse-en-soledad/?utm_source=chatgpt.com "“Soledad No Deseada”: Casi la mitad de la población mayor declara ..."
+[2]: https://www.latercera.com/nacional/noticia/estudio-revela-que-uno-de-cada-tres-adultos-mayores-experimenta-soledad-y-aislamiento-al-mismo-tiempo/?utm_source=chatgpt.com "Estudio revela que uno de cada tres adultos mayores experimenta ..."
+
+
+| Indicador                                                                                                         | Porcentaje / cifra                                                                                  | Fuente (link)                           | Año / periodo |
+| ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------- |
+| Prevalencia de depresión (≥ 18 años)                                                                              | **6,19%** (IC 95%: 4,51-8,43) / **6,65%** tras combinar fuentes ([scielo.cl][1])                    | ENS 2016-2017 + análisis complementario | 2016-17       |
+| Porcentaje de chilenos con síntomas de ansiedad (o salud mental) en estudio Termómetro de la Salud Mental ACHS‑UC | ~**24%** (uno de cada cuatro) presentó síntomas de ansiedad. ([Pontificia Universidad Católica][2]) | Nov-Dic 2023                            |               |
+| Porcentaje de chilenos con “problemas de salud mental” en la ronda reciente                                       | **12,7%** de la población, ronda 11 del Termómetro ACHS-UC.                                         | 2025                                    |               |
+
+[1]: https://www.scielo.cl/scielo.php?pid=S0034-98872022000700896&script=sci_arttext&utm_source=chatgpt.com "Combinación de datos de la Encuesta Nacional de Salud con ..."
+[2]: https://www.uc.cl/noticias/termometro-de-salud-mental-uno-de-cada-cuatro-chilenos-presenta-sintomas-de-ansiedad/?utm_source=chatgpt.com "Termómetro de salud mental: uno de cada cuatro chilenos presenta ..."
+
+
+
