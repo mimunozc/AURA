@@ -15,11 +15,7 @@ using System.Security.Claims;
 using Aura.WebApi.Diary;
 using System.Linq;
 
-
-
 var builder = WebApplication.CreateBuilder(args);
-
-
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -36,12 +32,24 @@ builder.Services.AddCors(o =>
 });
 
 // EF Core (SQLite)
-builder.Services.AddDbContext<AppDb>(o =>
-    o.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+var useInMemory = builder.Configuration.GetValue<bool>("Database:UseInMemory");
+
+if (useInMemory)
+{
+    builder.Services.AddDbContext<AppDb>(o => o.UseInMemoryDatabase("aura_dev"));
+}
+else
+{
+    builder.Services.AddDbContext<AppDb>(o =>
+        o.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+}
 
 // JWT
-var jwtKey = builder.Configuration["Auth:JwtKey"] ?? "dev-key-change";
+var jwtKey = builder.Configuration["Auth:JwtKey"] ?? "dev-aura-change";
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+var mockAuth = builder.Configuration.GetValue<bool>("Auth:Mock");
+var mockUser = builder.Configuration["Auth:MockUser"] ?? "user";
+var mockPass = builder.Configuration["Auth:MockPassword"] ?? "admin";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
@@ -64,6 +72,14 @@ builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
+
+if (!useInMemory)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    db.Database.EnsureCreated();
+}
+
 
 app.UseSerilogRequestLogging();
 app.UseCors("frontend");
@@ -90,7 +106,12 @@ static string Hash(string s)
 // ======== Endpoints de Autenticación ========
 
 app.MapPost("/auth/register", async (AppDb db, RegisterDto dto) =>
-{
+{    
+    if (mockAuth)
+    {
+        // En modo mock aceptamos "registro" sin persistir
+        return Results.Ok(new { ok = true, mock = true });
+    }
     if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
         return Results.BadRequest("Email y Password requeridos.");
 
@@ -111,6 +132,34 @@ app.MapPost("/auth/register", async (AppDb db, RegisterDto dto) =>
 
 app.MapPost("/auth/login", async (AppDb db, LoginDto dto) =>
 {
+    if (mockAuth)
+    {
+        if ((dto.Email?.Equals(mockUser, StringComparison.OrdinalIgnoreCase) == true
+                || dto.Email?.Equals("user@aura.cl", StringComparison.OrdinalIgnoreCase) == true)
+            && dto.Password == mockPass)
+        {
+            var fakeId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+            // NOMBRES DISTINTOS para evitar CS0136
+            var authClaims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, fakeId.ToString()),
+                new Claim(ClaimTypes.Email, dto.Email ?? mockUser)
+            };
+
+            var jwtSecurityToken = new JwtSecurityToken(
+                claims: authClaims,
+                expires: DateTime.UtcNow.AddDays(7),
+                signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
+            );
+
+            var accessToken = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
+            return Results.Ok(new { token = accessToken });
+        }
+
+        return Results.Unauthorized();
+    }
+    
     if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
         return Results.BadRequest("Email y Password requeridos.");
 

@@ -143,3 +143,13 @@ C:\Proyectos\Aura\api\src\Aura.WebApi\obj\Debug\net8.0\refint\Aura.WebApi.dll
 C:\Proyectos\Aura\api\src\Aura.WebApi\obj\Debug\net8.0\Aura.WebApi.pdb
 C:\Proyectos\Aura\api\src\Aura.WebApi\obj\Debug\net8.0\Aura.WebApi.genruntimeconfig.cache
 C:\Proyectos\Aura\api\src\Aura.WebApi\obj\Debug\net8.0\ref\Aura.WebApi.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.InMemory.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.Extensions.Caching.Abstractions.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.Extensions.Caching.Memory.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Proyectos\Aura\api\src\Aura.WebApi\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll

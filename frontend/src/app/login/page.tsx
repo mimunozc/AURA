@@ -16,45 +16,25 @@ export default function LoginPage() {
   }, []);
 
   async function doLogin() {
+  try {
     setLoading(true);
-    try {
-      const login = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: pwd })
-      });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ email, password: pwd })
+    });
 
-      if (login.status === 401) {
-        const reg = await fetch(`${API_URL}/auth/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password: pwd })
-        });
-        if (!reg.ok && reg.status !== 409) throw new Error("register failed");
-        const again = await fetch(`${API_URL}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password: pwd })
-        });
-        if (!again.ok) throw new Error("login failed");
-        const j = await again.json();
-        localStorage.setItem("aura_token", j.token);
-        localStorage.setItem("aura_dev_email", email);
-        r.replace("/chat");
-        return;
-      }
+    if (!res.ok) { alert("Credenciales inválidas"); return; }
 
-      if (!login.ok) throw new Error("login failed");
-      const j = await login.json();
-      localStorage.setItem("aura_token", j.token);
-      localStorage.setItem("aura_dev_email", email);
-      r.replace("/chat");
-    } catch {
-      alert("No se pudo iniciar sesión");
-    } finally {
-      setLoading(false);
-    }
+    const j = await res.json();
+    localStorage.setItem("aura_token", j.token);
+    localStorage.setItem("aura_dev_email", email);
+    r.replace("/chat");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   return (
     <div className="min-h-dvh flex items-center justify-center p-4">
