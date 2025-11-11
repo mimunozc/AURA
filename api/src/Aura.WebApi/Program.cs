@@ -1,57 +1,44 @@
-using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
-using Aura.WebApi.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
-using Aura.WebApi.Chat;
-using System.Net.Http.Json;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
-using Aura.WebApi.Diary;
-using System.Linq;
+using Aura.WebApi.Infrastructure;
+using Aura.WebApi.Domain;      
+using Pgvector.EntityFrameworkCore;    
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Swagger
+// Cadena de conexión (appsettings.*.json)
+var cs = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// EF Core Npgsql hacia Supabase (schema "aura")
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+builder.Services.AddDbContext<AuraDbContext>(o =>
+    o.UseNpgsql(cs, x => x.UseVector()));
+
+// Swagger + CORS
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-// CORS (permitir front durante el dev)
 builder.Services.AddCors(o =>
 {
-    o.AddPolicy("frontend", p =>
-        p.AllowAnyHeader()
-         .AllowAnyMethod()
-         .AllowCredentials()
-         .SetIsOriginAllowed(_ => true)); // abrir para dev
+    o.AddPolicy("frontend", p => p
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+        .SetIsOriginAllowed(_ => true));
 });
 
-// EF Core (SQLite)
-var useInMemory = builder.Configuration.GetValue<bool>("Database:UseInMemory");
-
-if (useInMemory)
-{
-    builder.Services.AddDbContext<AppDb>(o => o.UseInMemoryDatabase("aura_dev"));
-}
-else
-{
-    builder.Services.AddDbContext<AppDb>(o =>
-        o.UseSqlite(builder.Configuration.GetConnectionString("Default")));
-}
-
-// JWT
+// Auth (modo mock por defecto en dev)
 var jwtKey = builder.Configuration["Auth:JwtKey"] ?? "dev-aura-change";
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-var mockAuth = builder.Configuration.GetValue<bool>("Auth:Mock");
-var mockUser = builder.Configuration["Auth:MockUser"] ?? "user";
+var mockAuth = builder.Configuration.GetValue<bool>("Auth:Mock", true);
+var mockUser = builder.Configuration["Auth:MockUser"] ?? "user@aura.cl";
 var mockPass = builder.Configuration["Auth:MockPassword"] ?? "admin";
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
         o.TokenValidationParameters = new TokenValidationParameters
@@ -63,249 +50,80 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true
         };
     });
-
 builder.Services.AddAuthorization();
-// Serilog
-builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
-
-// HttpClient (por si lo necesitas luego)
-builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-if (!useInMemory)
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-    db.Database.EnsureCreated();
-}
-
-
-app.UseSerilogRequestLogging();
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Swagger solo en Development (o siempre si prefieres)
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Health y versión
-app.MapGet("/healthz", () => Results.Ok(new { ok = true, service = "api" }));
+// Health/version
+app.MapGet("/health", () => Results.Ok(new { ok = true, service = "api" }));
 app.MapGet("/version", () => Results.Ok(new { version = "0.1.0" }));
 
-// ======== Helpers internos ========
-
-static string Hash(string s)
+// --- AUTH MOCK (no toca BD; útil mientras tu tabla users no guarda PasswordHash) ---
+app.MapPost("/auth/login", (string email, string password) =>
 {
-    using var sha = SHA256.Create();
-    var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(s));
-    return Convert.ToHexString(bytes);
-}
-
-// ======== Endpoints de Autenticación ========
-
-app.MapPost("/auth/register", async (AppDb db, RegisterDto dto) =>
-{    
-    if (mockAuth)
+    if (!mockAuth) return Results.Problem("Auth real no habilitada aún");
+    if ((email?.Equals(mockUser, StringComparison.OrdinalIgnoreCase) ?? false) && password == mockPass)
     {
-        // En modo mock aceptamos "registro" sin persistir
-        return Results.Ok(new { ok = true, mock = true });
-    }
-    if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
-        return Results.BadRequest("Email y Password requeridos.");
-
-    var exists = await db.Users.AnyAsync(x => x.Email == dto.Email);
-    if (exists) return Results.Conflict("Email ya registrado.");
-
-    var u = new User
-    {
-        Email = dto.Email.Trim(),
-        PasswordHash = Hash(dto.Password)
-    };
-
-    db.Users.Add(u);
-    await db.SaveChangesAsync();
-
-    return Results.Ok(new { ok = true });
-});
-
-app.MapPost("/auth/login", async (AppDb db, LoginDto dto) =>
-{
-    if (mockAuth)
-    {
-        if ((dto.Email?.Equals(mockUser, StringComparison.OrdinalIgnoreCase) == true
-                || dto.Email?.Equals("user@aura.cl", StringComparison.OrdinalIgnoreCase) == true)
-            && dto.Password == mockPass)
+        var claims = new[]
         {
-            var fakeId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-
-            // NOMBRES DISTINTOS para evitar CS0136
-            var authClaims = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, fakeId.ToString()),
-                new Claim(ClaimTypes.Email, dto.Email ?? mockUser)
-            };
-
-            var jwtSecurityToken = new JwtSecurityToken(
-                claims: authClaims,
-                expires: DateTime.UtcNow.AddDays(7),
-                signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
-            );
-
-            var accessToken = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
-            return Results.Ok(new { token = accessToken });
-        }
-
-        return Results.Unauthorized();
+            new Claim(ClaimTypes.NameIdentifier, "00000000-0000-0000-0000-000000000001"),
+            new Claim(ClaimTypes.Email, email)
+        };
+        var token = new JwtSecurityToken(
+            claims: claims,
+            expires: DateTime.UtcNow.AddDays(7),
+            signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256));
+        var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+        return Results.Ok(new { token = jwt });
     }
-    
-    if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
-        return Results.BadRequest("Email y Password requeridos.");
-
-    var ph = Hash(dto.Password);
-    var u = await db.Users.FirstOrDefaultAsync(x => x.Email == dto.Email && x.PasswordHash == ph);
-    if (u == null) return Results.Unauthorized();
-
-    var claims = new[]
-    {
-        new Claim(ClaimTypes.NameIdentifier, u.Id.ToString()),
-        new Claim(ClaimTypes.Email, u.Email)
-    };
-
-    var token = new JwtSecurityToken(
-        claims: claims,
-        expires: DateTime.UtcNow.AddDays(7),
-        signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256));
-
-    var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-
-    return Results.Ok(new { token = jwt });
+    return Results.Unauthorized();
 });
 
-app.MapPost("/chat/start", async (AppDb db) =>
+// --- Conversación: crear ---
+app.MapPost("/chat/start", async (AuraDbContext db) =>
 {
-
-    var firstUser = await db.Users
-        .OrderBy(x => x.CreatedAt)   
-        .FirstOrDefaultAsync();
-
-    var c = new Conversation();
-
-    if (firstUser != null)
-    {
-        c.UserId = firstUser.Id; 
-    }
-
+    var c = new Conversation { UserId = Guid.Parse("00000000-0000-0000-0000-000000000001") };
     db.Conversations.Add(c);
     await db.SaveChangesAsync();
-
     return Results.Ok(new { conversationId = c.Id });
 });
 
-
-
-app.MapPost("/chat/send", async (
-    AppDb db,
-    IConfiguration cfg,
-    HttpClient http,
-    ChatSendIn input
-    ) =>
+// --- Conversación: enviar mensaje (persistimos mensaje user y assistant) ---
+app.MapPost("/chat/send", async (AuraDbContext db, ChatSendIn input) =>
 {
-    // 1. datos desde el body
-    var conversationId = input.conversationId;
-    var message = input.message;
-
-    // 2. guardamos el mensaje del usuario
-    db.Messages.Add(new Message
+    // guarda mensaje del usuario
+    var mUser = new Message
     {
-        ConversationId = conversationId,
+        ConversationId = input.conversationId,
+        UserId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
         Role = "user",
-        Text = message
-    });
+        Content = input.message
+    };
+    db.Messages.Add(mUser);
     await db.SaveChangesAsync();
 
-    // 3. llamamos al servicio de IA (FastAPI)
-    var aiBase = cfg["Ai:BaseUrl"] ?? "http://localhost:8002";
-    // nuestro FastAPI expone POST /chat con { user, history }
-    var aiRes = await http.PostAsJsonAsync($"{aiBase}/chat", new
-    {
-        user = message,
-        history = Array.Empty<object>() // luego puedes enviar historial
-    });
+    // respuesta provisional (aquí normalmente llamas a tu servicio de IA)
+    var reply = $"Recibí: {input.message}";
 
-    if (!aiRes.IsSuccessStatusCode)
+    var mAssistant = new Message
     {
-        // para que puedas verlo en el front
-        var err = await aiRes.Content.ReadAsStringAsync();
-        Console.WriteLine($"AI error: {err}");
-        return Results.Problem("Error en servicio AI");
-    }
-
-    // 4. leemos la respuesta del servicio de IA
-    var payload = await aiRes.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-    var reply = payload?["reply"] ?? "No pude responder ahora.";
-
-    // 5. guardamos la respuesta del asistente
-    db.Messages.Add(new Message
-    {
-        ConversationId = conversationId,
+        ConversationId = input.conversationId,
+        UserId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
         Role = "assistant",
-        Text = reply
-    });
+        Content = reply
+    };
+    db.Messages.Add(mAssistant);
     await db.SaveChangesAsync();
 
-    // 6. devolvemos al frontend
     return Results.Ok(new { reply });
 });
-
-
-app.MapPost("/mood", [Authorize] async (AppDb db, ClaimsPrincipal cp, MoodIn input) =>
-{
-    var uid = Guid.Parse(cp.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-    Guid? cid = input.ConversationId;
-    if (cid is null)
-    {
-        cid = await db.Conversations
-            .Where(c => c.UserId == uid)
-            .OrderByDescending(c => c.CreatedAt)
-            .Select(c => (Guid?)c.Id)
-            .FirstOrDefaultAsync();
-    }
-
-    var entry = new MoodEntry
-    {
-        UserId = uid,
-        ConversationId = cid,
-        Mood = input.Mood?.Trim() ?? "",
-        Notes = input.Notes?.Trim() ?? ""
-    };
-
-    db.MoodEntries.Add(entry);
-    await db.SaveChangesAsync();
-
-    return Results.Ok(new { ok = true, id = entry.Id });
-});
-
-// Listar últimas entradas (por usuario, opcionalmente por conversación)
-app.MapGet("/mood", [Authorize] async (AppDb db, ClaimsPrincipal cp, Guid? conversationId, int take = 30) =>
-{
-    var uid = Guid.Parse(cp.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-    var q = db.MoodEntries.AsQueryable().Where(x => x.UserId == uid);
-    if (conversationId is not null) q = q.Where(x => x.ConversationId == conversationId);
-
-    var items = await q
-        .OrderByDescending(x => x.CreatedAt)
-        .Take(Math.Clamp(take, 1, 200))
-        .Select(x => new MoodOut(x.Id, x.Mood, x.Notes, x.CreatedAt, x.ConversationId))
-        .ToListAsync();
-
-    return Results.Ok(items);
-});
-
-app.MapGet("/health", () => Results.Ok(new { ok = true, service = "api" }));
 
 app.Run();
 
