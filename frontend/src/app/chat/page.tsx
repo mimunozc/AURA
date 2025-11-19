@@ -1,4 +1,3 @@
-// src/app/chat/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,159 +11,127 @@ type Msg = { id: string; role: "user" | "assistant"; content: string };
 const LS_KEY = "aura_conversation_id";
 
 export default function ChatPage() {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
 
-  // al montar: intentar recuperar conversación guardada
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = localStorage.getItem(LS_KEY);
-    if (saved) {
-      // por ahora no pedimos historial porque la API no tiene /history
-      setSessionId(saved);
+    async function init() {
+      let convId: string | null = null;
+      if (typeof window !== "undefined") {
+        convId = localStorage.getItem(LS_KEY);
+      }
+      try {
+        if (!convId) {
+          const boot = await chatApi.boot();
+          convId = boot.conversationId;
+          if (typeof window !== "undefined") {
+            localStorage.setItem(LS_KEY, convId);
+          }
+        }
+        setConversationId(convId);
+        setMessages([
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: "Hola, soy AURA. ¿Cómo te sientes hoy?"
+          }
+        ]);
+      } catch {
+        setMessages([
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: "No pude conectar con el servicio por ahora. Prueba iniciar sesión nuevamente o revisar el estado en /status."
+          }
+        ]);
+      }
     }
+    init();
   }, []);
 
-  async function startChat() {
-    try {
-      const boot = await chatApi.boot();
-      const id = boot.conversationId;
-      localStorage.setItem(LS_KEY, id);
-      setSessionId(id);
-      setMessages([
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "Hola 👋 ¿en qué te puedo ayudar hoy?",
-        },
-      ]);
-    } catch (err) {
-      setMessages([
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "⚠️ No pude iniciar la conversación. Intenta de nuevo.",
-        },
-      ]);
-    }
-  }
-
   async function sendMessage() {
-    if (!sessionId) return;
+    if (!conversationId) return;
     const text = input.trim();
     if (!text || sending) return;
 
-    setSending(true);
-    setInput("");
+    const userMsg: Msg = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text
+    };
 
-    // agrego mensaje del usuario
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "user", content: text },
-    ]);
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setSending(true);
 
     try {
-      const res = await chatApi.send(sessionId, text);
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: res.reply },
-      ]);
-    } catch (e) {
-      // si falló, borro la conversación guardada porque puede ser un GUID viejo
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(LS_KEY);
-      }
-      setSessionId(null);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "⚠️ No se pudo enviar el mensaje. Inicia otra conversación.",
-        },
-      ]);
+      const res = await chatApi.send(conversationId, text);
+      const assistantMsg: Msg = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: res.reply
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch {
+      const errMsg: Msg = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "No pude responder en este momento. Intenta nuevamente."
+      };
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
       setSending(false);
     }
   }
 
-  function resetSession() {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(LS_KEY);
-    }
-    setSessionId(null);
-    setMessages([]);
-  }
-
   return (
-    <div className="min-h-dvh flex flex-col">
-      <Header user="Matías" />
-
-      <div className="flex-1 px-4 py-6">
-        <div className="max-w-xl mx-auto space-y-4">
-          <Card className="p-4 min-h-[300px]">
-            {messages.length === 0 && (
-              <div className="text-center text-brand-subtext text-sm">
-                {sessionId
-                  ? "Conversación lista, escribe tu mensaje…"
-                  : "Inicia una conversación para hablar con AURA."}
-              </div>
-            )}
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`my-2 flex ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+    <div className="min-h-dvh flex flex-col bg-slate-950 text-white">
+      <Header />
+      <main className="flex-1 flex justify-center px-4 py-4">
+        <div className="w-full max-w-2xl flex flex-col gap-4">
+          <Card className="flex-1 flex flex-col h-[70vh] overflow-hidden">
+            <div className="flex-1 overflow-y-auto space-y-2 p-4">
+              {messages.map((m) => (
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
+                  key={m.id}
+                  className={
                     m.role === "user"
-                      ? "bg-indigo-500 text-white"
-                      : "bg-white text-slate-700 border border-slate-200"
-                  }`}
+                      ? "ml-auto max-w-[80%] rounded-2xl bg-blue-600 px-3 py-2 text-sm"
+                      : "mr-auto max-w-[80%] rounded-2xl bg-slate-800 px-3 py-2 text-sm"
+                  }
                 >
                   {m.content}
                 </div>
-              </div>
-            ))}
-          </Card>
-
-          {sessionId && (
-            <button
-              onClick={resetSession}
-              className="text-xs text-slate-400 hover:text-slate-600"
-            >
-              Limpiar conversación
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="w-full border-t border-brand-border bg-white px-4 py-3">
-        <div className="max-w-xl mx-auto flex items-center gap-2">
-          {!sessionId ? (
-            <Button onClick={startChat} className="w-full">
-              Iniciar conversación
-            </Button>
-          ) : (
-            <>
+              ))}
+              {messages.length === 0 && (
+                <div className="text-sm text-slate-400">
+                  Conectando con AURA...
+                </div>
+              )}
+            </div>
+            <div className="border-t border-slate-800 p-3 flex gap-2 items-center">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !sending && sendMessage()}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && !sending && sendMessage()
+                }
                 placeholder="Escribe tu mensaje…"
-                disabled={sending}
+                disabled={sending || !conversationId}
               />
-              <Button onClick={sendMessage} disabled={sending}>
+              <Button onClick={sendMessage} disabled={sending || !conversationId}>
                 {sending ? "Enviando…" : "Enviar"}
               </Button>
-            </>
-          )}
+            </div>
+          </Card>
+          <div className="text-xs text-slate-500 text-center">
+            Las conversaciones se guardan asociadas a tu usuario demo. Más
+            adelante se usarán para construir tu perfil de bienestar.
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

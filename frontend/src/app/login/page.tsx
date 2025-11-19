@@ -16,51 +16,58 @@ export default function LoginPage() {
   }, []);
 
   async function doLogin() {
-  try {
+    if (!email || !pwd) return;
     setLoading(true);
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ email, password: pwd })
-    });
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: pwd })
+      });
 
-    if (!res.ok) { alert("Credenciales inválidas"); return; }
+      if (!res.ok) {
+        alert("Correo o contraseña incorrectos");
+        return;
+      }
 
-    const j = await res.json();
-    localStorage.setItem("aura_token", j.token);
-    localStorage.setItem("aura_dev_email", email);
-    r.replace("/chat");
-  } finally {
-    setLoading(false);
+      const j = await res.json();
+      localStorage.setItem("aura_token", j.token);
+      localStorage.setItem("aura_dev_email", email);
+      r.push("/chat");
+    } finally {
+      setLoading(false);
+    }
   }
-}
-
 
   return (
-    <div className="min-h-dvh flex items-center justify-center p-4">
-      <div className="w-full max-w-sm border rounded-2xl p-5 space-y-3">
-        <h1 className="text-xl font-semibold text-center">Iniciar sesión</h1>
-        <input
-          className="w-full rounded-xl border border-brand-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="email"
-        />
-        <input
-          className="w-full rounded-xl border border-brand-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-          value={pwd}
-          onChange={e => setPwd(e.target.value)}
-          type="password"
-          placeholder="contraseña"
-        />
-        <button
-          onClick={doLogin}
-          disabled={loading}
-          className="w-full rounded bg-blue-600 text-white py-2 disabled:opacity-50"
-        >
-          {loading ? "Ingresando..." : "Ingresar"}
-        </button>
-        <a href="/chat" className="block text-center underline text-sm">Volver al chat</a>
+    <div className="min-h-dvh flex items-center justify-center bg-slate-950 text-white">
+      <div className="w-full max-w-sm space-y-6 bg-slate-900/70 p-6 rounded-2xl border border-slate-800">
+        <h1 className="text-xl font-semibold text-center">Inicio de sesión AURA</h1>
+        <div className="space-y-3">
+          <input
+            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="correo"
+          />
+          <input
+            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+            type="password"
+            value={pwd}
+            onChange={(e) => setPwd(e.target.value)}
+            placeholder="contraseña"
+          />
+          <button
+            onClick={doLogin}
+            disabled={loading}
+            className="w-full rounded bg-blue-600 text-white py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {loading ? "Ingresando..." : "Ingresar"}
+          </button>
+          <a href="/chat" className="block text-center underline text-xs">
+            Volver al chat
+          </a>
+        </div>
       </div>
     </div>
   );

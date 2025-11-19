@@ -1,3 +1,3 @@
 ﻿<Project>
-  <Import Project="..\buildMultiTargeting\Aura.WebApi.props" />
+  <Import Project="../buildMultiTargeting/Aura.WebApi.props" />
 </Project>
