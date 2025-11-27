@@ -13,23 +13,22 @@ export async function request<T>(
   service: "api" | "ai" = "api"
 ): Promise<T> {
   const base = service === "api" ? API_URL : AI_URL;
-
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> | undefined),
     ...authHeader()
   };
-
+  if (!headers["Content-Type"] && !(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
   const res = await fetch(`${base}${path}`, {
     ...options,
     headers
   });
-
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
-
   return (await res.json()) as T;
 }
 
+export const api = { request };
 export { API_URL, AI_URL };

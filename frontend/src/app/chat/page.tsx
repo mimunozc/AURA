@@ -1,55 +1,82 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { chatApi } from "@/lib/chat";
+import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
+import Link from "next/link";
 import Header from "@/components/Header";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
+import { chatApi } from "@/lib/chat";
+import { api } from "@/lib/api";
+import { getUserId } from "@/lib/identity";
+import { useSearchParams } from "next/navigation";
 
 type Msg = { id: string; role: "user" | "assistant"; content: string };
 const LS_KEY = "aura_conversation_id";
 
 export default function ChatPage() {
+  const searchParams = useSearchParams();
+  const [activeStepTitle, setActiveStepTitle] = useState<string | null>(null);
+  const userId = useMemo(() => getUserId(), []);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [booting, setBooting] = useState(true);
+  const [showCheckinPrompt, setShowCheckinPrompt] = useState(false);
+  const [checkingCheckin, setCheckingCheckin] = useState(true);
+
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   useEffect(() => {
-    async function init() {
-      let convId: string | null = null;
-      if (typeof window !== "undefined") {
-        convId = localStorage.getItem(LS_KEY);
-      }
+    async function boot() {
+      setBooting(true);
       try {
-        if (!convId) {
-          const boot = await chatApi.boot();
-          convId = boot.conversationId;
+        const stored =
+          typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null;
+        if (stored) {
+          setConversationId(stored);
+        } else {
+          const res = await chatApi.boot();
+          setConversationId(res.conversationId);
           if (typeof window !== "undefined") {
-            localStorage.setItem(LS_KEY, convId);
+            localStorage.setItem(LS_KEY, res.conversationId);
           }
         }
-        setConversationId(convId);
-        setMessages([
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: "Hola, soy AURA. ¿Cómo te sientes hoy?"
-          }
-        ]);
-      } catch {
-        setMessages([
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: "No pude conectar con el servicio por ahora. Prueba iniciar sesión nuevamente o revisar el estado en /status."
-          }
-        ]);
+      } finally {
+        setBooting(false);
       }
     }
-    init();
+    boot();
   }, []);
+
+  useEffect(() => {
+  const title = searchParams.get("stepTitle");
+  if (title) {
+    setActiveStepTitle(title);
+  }
+}, [searchParams]);
+
+  useEffect(() => {
+    async function checkCheckin() {
+      setCheckingCheckin(true);
+      try {
+        const res = await api.request<any>(
+          `/checkin/by-date?userId=${encodeURIComponent(
+            userId
+          )}&date=${encodeURIComponent(today)}`
+        );
+        if (!res) {
+          setShowCheckinPrompt(true);
+        }
+      } catch {
+      } finally {
+        setCheckingCheckin(false);
+      }
+    }
+    checkCheckin();
+  }, [userId, today]);
 
   async function sendMessage() {
     if (!conversationId) return;
@@ -62,7 +89,7 @@ export default function ChatPage() {
       content: text
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages(prev => [...prev, userMsg]);
     setInput("");
     setSending(true);
 
@@ -73,60 +100,150 @@ export default function ChatPage() {
         role: "assistant",
         content: res.reply
       };
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages(prev => [...prev, assistantMsg]);
     } catch {
-      const errMsg: Msg = {
+      const errorMsg: Msg = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: "No pude responder en este momento. Intenta nuevamente."
+        content: "Ocurrió un error al enviar tu mensaje. Intenta nuevamente."
       };
-      setMessages((prev) => [...prev, errMsg]);
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setSending(false);
     }
   }
 
+function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
   return (
-    <div className="min-h-dvh flex flex-col bg-slate-950 text-white">
+    <div className="min-h-screen bg-brand-bg text-brand-text">
       <Header />
-      <main className="flex-1 flex justify-center px-4 py-4">
-        <div className="w-full max-w-2xl flex flex-col gap-4">
-          <Card className="flex-1 flex flex-col h-[70vh] overflow-hidden">
-            <div className="flex-1 overflow-y-auto space-y-2 p-4">
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={
-                    m.role === "user"
-                      ? "ml-auto max-w-[80%] rounded-2xl bg-blue-600 px-3 py-2 text-sm"
-                      : "mr-auto max-w-[80%] rounded-2xl bg-slate-800 px-3 py-2 text-sm"
-                  }
-                >
-                  {m.content}
+      <main className="max-w-3xl mx-auto px-4 py-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">Chat con AURA</h1>
+              <p className="text-sm text-brand-subtext">
+                Conversa con AURA y recibe apoyo según tu contexto emocional.
+              </p>
+            </div>
+            <Link href="/status">
+              <Button type="button" className="text-sm">
+                Ver dashboard
+              </Button>
+            </Link>
+          </div>
+
+          {activeStepTitle && (
+  <Card className="p-3 border border-brand-border bg-brand-card">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      <div>
+        <div className="text-sm font-medium">
+          Estás trabajando un paso de tu guía adaptativa
+        </div>
+        <div className="text-xs text-brand-subtext">
+          Paso: {activeStepTitle}
+        </div>
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button
+          type="button"
+          className="text-sm"
+          onClick={() => setActiveStepTitle(null)}
+        >
+          Terminar paso
+        </Button>
+      </div>
+    </div>
+  </Card>
+)}
+
+
+          {showCheckinPrompt && (
+            <Card className="p-3 border border-brand-border bg-brand-card">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div>
+                  <div className="text-sm font-medium">
+                    Aún no has hecho tu Mood Check-in de hoy
+                  </div>
+                  <div className="text-xs text-brand-subtext">
+                    Toma 30 segundos para registrar cómo estás. Esto ayuda a que
+                    AURA entienda mejor tu contexto.
+                  </div>
                 </div>
-              ))}
-              {messages.length === 0 && (
-                <div className="text-sm text-slate-400">
-                  Conectando con AURA...
+                <div className="flex gap-2 justify-end">
+                  <Link href="/checkin">
+                    <Button type="button" className="text-sm">
+                      Hacer check-in ahora
+                    </Button>
+                  </Link>
+                  <Button
+                    type="button"
+                    className="text-sm"
+                    onClick={() => setShowCheckinPrompt(false)}
+                  >
+                    Más tarde
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          <Card className="p-4 space-y-4">
+            <div className="h-80 overflow-y-auto border border-brand-border rounded-xl bg-brand-card px-3 py-2 space-y-2">
+              {booting && (
+                <div className="text-xs text-brand-subtext">
+                  Iniciando conversación...
                 </div>
               )}
+              {!booting && messages.length === 0 && (
+                <div className="text-xs text-brand-subtext">
+                  Aún no hay mensajes. Cuéntale a AURA cómo te sientes hoy o qué
+                  necesitas.
+                </div>
+              )}
+              {messages.map(msg => (
+                <div
+                  key={msg.id}
+                  className={`flex ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
+                      msg.role === "user"
+                        ? "bg-brand-primary text-white"
+                        : "bg-brand-bg-soft text-brand-text border border-brand-border"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="border-t border-slate-800 p-3 flex gap-2 items-center">
+            <div className="flex gap-2 items-center">
               <Input
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && !sending && sendMessage()
-                }
-                placeholder="Escribe tu mensaje…"
-                disabled={sending || !conversationId}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Escribe un mensaje para AURA..."
               />
-              <Button onClick={sendMessage} disabled={sending || !conversationId}>
+              <Button
+                type="button"
+                onClick={sendMessage}
+                disabled={sending || !conversationId}
+              >
                 {sending ? "Enviando…" : "Enviar"}
               </Button>
             </div>
           </Card>
-          <div className="text-xs text-slate-500 text-center">
+          <div className="text-xs text-brand-subtext text-center">
             Las conversaciones se guardan asociadas a tu usuario demo. Más
             adelante se usarán para construir tu perfil de bienestar.
           </div>

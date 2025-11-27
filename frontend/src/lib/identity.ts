@@ -4,7 +4,7 @@ const USER_ID_KEY = "aura_user_id";
 const CONTEXT_ID_KEY = "aura_context_id";
 
 export function getUserId(): string {
-  if (typeof window === "undefined") return "demo-user";
+  if (typeof window === "undefined") return "aura-demo-user";
   let id = localStorage.getItem(USER_ID_KEY);
   if (!id) {
     id = `aura-${uuidv4()}`;

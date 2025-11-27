@@ -1,13 +1,15 @@
-"use client";
-import { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes } from "react";
 
-export default function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  const { className = "", ...rest } = props;
+type InputProps = InputHTMLAttributes<HTMLInputElement>;
 
+export default function Input({ className = "", ...props }: InputProps) {
   return (
     <input
-      {...rest}
-      className={`w-full px-3 py-3 border border-slate-700 rounded-xl bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+      {...props}
+      className={
+        "w-full px-3 py-2 rounded-xl border border-brand-border text-brand-text bg-brand-bg-soft focus:outline-none focus:ring-2 focus:ring-brand-primary " +
+        className
+      }
     />
   );
 }

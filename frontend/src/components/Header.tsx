@@ -29,13 +29,12 @@ export default function Header({ user = "Usuario" }: { user?: string }) {
             <Link className="block px-3 py-2 hover:bg-brand-bg" href="/journal">
               Journal
             </Link>
-            <Link className="block px-3 py-2 hover:bg-brand-bg" href="/mood">
-              Mood
+            <Link className="block px-3 py-2 hover:bg-brand-bg" href="/status">
+              Dashboard
             </Link>
-            {/* nuevo item */}
-            <Link className="block px-3 py-2 hover:bg-brand-bg rounded-b-xl" href="/que-es-aura">
-              Qué es Aura
-            </Link>
+            <Link className="block px-3 py-2 hover:bg-brand-bg" href="/guide">
+              Guía
+            </Link>            
           </div>
         )}
       </div>

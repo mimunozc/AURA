@@ -28,6 +28,7 @@ export default function HomePage() {
           </Link>
           <div className="hidden space-x-6 md:flex">
             <a href="#caracteristicas" className="text-stone-600 hover:text-teal-600">Características</a>
+            <a href="#herramientas" className="text-stone-600 hover:text-teal-600">Herramientas</a>
             <a href="#respaldo" className="text-stone-600 hover:text-teal-600">Respaldo</a>
             <a href="#crisis" className="text-stone-600 hover:text-teal-600">Ayuda</a>
           </div>
@@ -71,16 +72,44 @@ export default function HomePage() {
 
           {/* Ventana del chat simulada */}
           <div className="rounded-2xl border border-stone-200 bg-stone-100 p-4 shadow-md">
-            <div className="aspect-[16/10] w-full rounded-xl border border-stone-200 bg-white p-4 flex flex-col gap-3">
-              <div className="h-3 w-24 rounded-full bg-stone-200" />
-              <div className="h-3 w-32 rounded-full bg-stone-200" />
-              <div className="flex-1 rounded-lg bg-stone-50 border border-stone-200" />
-              <div className="h-10 rounded-lg bg-teal-600/15 border border-teal-600/30" />
-            </div>
-            <p className="mt-2 text-center text-sm text-stone-500">
-              Interfaz simple para conversaciones significativas.
-            </p>
-          </div>
+  <div className="aspect-[16/10] w-full rounded-xl border border-stone-200 bg-white p-4 flex flex-col gap-3">
+    <div className="flex items-center justify-between">
+      <div className="h-3 w-20 rounded-full bg-stone-200" />
+      <div className="flex gap-1">
+        <span className="h-2 w-2 rounded-full bg-stone-200" />
+        <span className="h-2 w-2 rounded-full bg-stone-200" />
+        <span className="h-2 w-2 rounded-full bg-stone-200" />
+      </div>
+    </div>
+
+    <div className="flex-1 space-y-2 overflow-hidden">
+      <div className="flex">
+        <div className="max-w-[80%] rounded-2xl bg-stone-100 px-3 py-2 text-xs text-stone-500">
+          Hola, soy AURA. ¿En qué te gustaría que trabajáramos hoy?
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <div className="max-w-[80%] rounded-2xl bg-teal-600 text-xs text-white px-3 py-2">
+          Me he sentido con mucha ansiedad estos días.
+        </div>
+      </div>
+      <div className="flex">
+        <div className="max-w-[80%] rounded-2xl bg-stone-100 px-3 py-2 text-xs text-stone-500">
+          Gracias por compartirlo. Podemos empezar con un ejercicio breve de respiración y luego revisar qué la está alimentando.
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-auto flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-2">
+      <div className="h-3 flex-1 rounded-full bg-stone-200" />
+      <div className="h-7 w-16 rounded-full bg-teal-600/20" />
+    </div>
+  </div>
+  <p className="mt-2 text-center text-sm text-stone-500">
+    Interfaz simple para conversaciones significativas.
+  </p>
+</div>
+
         </div>
       </section>
 
@@ -110,7 +139,68 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>      
+
+      {/* ===== HERRAMIENTAS DEL BIENESTAR ===== */}
+<section id="herramientas" className="py-20 bg-white">
+  <div className="mx-auto max-w-6xl px-4">
+    <div className="text-center">
+      <h2 className="text-3xl font-bold tracking-tight text-stone-900">
+        Herramientas para tu bienestar emocional
+      </h2>
+      <p className="mt-3 text-lg text-stone-600">
+        Funcionalidades esenciales para entenderte, mejorar y sentirte acompañado durante el proceso.
+      </p>
+    </div>
+
+    <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Mood Check-in */}
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-lg transition-all hover:shadow-xl hover:ring-2 hover:ring-teal-100">
+        <div className="text-4xl">📊</div>
+        <h3 className="mt-3 text-lg font-semibold text-stone-900">Mood Check-in</h3>
+        <p className="mt-1 text-stone-600">
+          Registra tu estado emocional en pocos segundos y construye tu línea de tiempo.
+        </p>
+      </div>
+
+      {/* Dashboard emocional */}
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-lg transition-all hover:shadow-xl hover:ring-2 hover:ring-teal-100">
+        <div className="text-4xl">📈</div>
+        <h3 className="mt-3 text-lg font-semibold text-stone-900">Dashboard emocional</h3>
+        <p className="mt-1 text-stone-600">
+          Visualiza tu progreso, patrones y señales detectadas por AURA.
+        </p>
+      </div>
+
+      {/* Guía adaptativa */}
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-lg transition-all hover:shadow-xl hover:ring-2 hover:ring-teal-100">
+        <div className="text-4xl">🎯</div>
+        <h3 className="mt-3 text-lg font-semibold text-stone-900">Guía adaptativa</h3>
+        <p className="mt-1 text-stone-600">
+          Un camino personalizado con ejercicios y reflexiones según tus necesidades.
+        </p>
+      </div>
+
+      {/* Journal */}
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-lg transition-all hover:shadow-xl hover:ring-2 hover:ring-teal-100">
+        <div className="text-4xl">📝</div>
+        <h3 className="mt-3 text-lg font-semibold text-stone-900">Journal</h3>
+        <p className="mt-1 text-stone-600">
+          Escribe libremente, procesa tus emociones y profundiza en tu autoconocimiento.
+        </p>
+      </div>
+    </div>
+
+    <div className="mt-12 flex justify-center">
+      <Link
+        href="/login"
+        className="rounded-full bg-teal-600 px-8 py-3 text-lg font-semibold text-white shadow-lg transition-transform hover:scale-105 hover:bg-teal-700"
+      >
+        Probar herramientas
+      </Link>
+    </div>
+  </div>
+</section>
 
       {/* ===== RESPALDO + FRASE ===== */}
       <section id="respaldo" className="bg-white py-20">

@@ -1,4 +1,19 @@
-import { ReactNode } from "react";
-export default function Card({ children, className="" }:{children:ReactNode; className?:string}) {
-  return <div className={`bg-brand-card border border-brand-border rounded-2xl shadow-soft ${className}`}>{children}</div>;
+import type { ReactNode } from "react";
+
+type CardProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+export default function Card({ children, className = "" }: CardProps) {
+  return (
+    <div
+      className={
+        "rounded-xl bg-brand-card border border-brand-border shadow-sm " +
+        className
+      }
+    >
+      {children}
+    </div>
+  );
 }

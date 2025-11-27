@@ -3,7 +3,7 @@
     "Aura.WebApi": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:8001",
+      "applicationUrl": "http://localhost:5187",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

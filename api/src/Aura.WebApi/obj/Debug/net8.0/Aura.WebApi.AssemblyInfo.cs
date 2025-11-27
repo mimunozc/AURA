@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Aura.WebApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1c45ce95c9de3bb020d7f2264bbce1798554873d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b5e0bcef157ac03666558a05ffdf8a06c5d1dfc5")]
 [assembly: System.Reflection.AssemblyProductAttribute("Aura.WebApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Aura.WebApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

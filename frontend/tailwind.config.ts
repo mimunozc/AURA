@@ -1,23 +1,31 @@
-import forms from "@tailwindcss/forms";
-
 /** @type {import('tailwindcss').Config} */
-const config = {
+module.exports = {
   content: [
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        aura: { base: "#0f766e" },
+        "brand-primary": "#4A3AFF",
+        "brand-primary-dark": "#3528B8",
+
+        "brand-bg": "#F7F7F9",
+        "brand-bg-soft": "#FFFFFF",
+        "brand-card": "#FFFFFF",
+
+        "brand-text": "#1C1C1E",
+        "brand-subtext": "#6E6E73",
+
+        "brand-border": "#E1E1E5",
+        
+        "brand-button-bg": "#4A3AFF",
+        "brand-button-text": "#FFFFFF",
+        "brand-button-bg-hover": "#3528B8",
       },
       borderRadius: {
-        "2xl": "1.5rem",
-      },
+        xl: "1rem",
+      }
     },
   },
-  plugins: [forms],
+  plugins: [],
 };
-
-export default config;
