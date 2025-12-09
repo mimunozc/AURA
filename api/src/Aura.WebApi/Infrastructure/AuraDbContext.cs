@@ -14,6 +14,8 @@ public class AuraDbContext : DbContext
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<MoodCheckin> MoodCheckins => Set<MoodCheckin>();
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
+    public DbSet<MessageAnalysis> MessageAnalyses => Set<MessageAnalysis>();
+    public DbSet<ClinicalNote> ClinicalNotes => Set<ClinicalNote>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -55,6 +57,17 @@ public class AuraDbContext : DbContext
             e.ToTable("journal_entries");
             e.HasKey(x => x.Id);
             e.Property(x => x.Embedding).HasColumnType("vector(1536)");
+        });
+
+        mb.Entity<MessageAnalysis>(e =>
+        {
+            e.ToTable("message_analyses");
+            e.HasKey(x => x.Id);
+        });
+        mb.Entity<ClinicalNote>(e =>
+        {
+            e.ToTable("clinical_notes");
+            e.HasKey(x => x.Id);
         });
     }
 }

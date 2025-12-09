@@ -170,8 +170,8 @@ C:/Proyectos/Aura/api/src/Aura.WebApi/obj/Debug/net8.0/refint/Aura.WebApi.dll
 C:/Proyectos/Aura/api/src/Aura.WebApi/obj/Debug/net8.0/Aura.WebApi.pdb
 C:/Proyectos/Aura/api/src/Aura.WebApi/obj/Debug/net8.0/Aura.WebApi.genruntimeconfig.cache
 C:/Proyectos/Aura/api/src/Aura.WebApi/obj/Debug/net8.0/ref/Aura.WebApi.dll
-/Users/matias/Desktop/Proyecto/AURA/api/src/Aura.WebApi/bin/Debug/net8.0/appsettings.json
 /Users/matias/Desktop/Proyecto/AURA/api/src/Aura.WebApi/bin/Debug/net8.0/appsettings.Development.json
+/Users/matias/Desktop/Proyecto/AURA/api/src/Aura.WebApi/bin/Debug/net8.0/appsettings.json
 /Users/matias/Desktop/Proyecto/AURA/api/src/Aura.WebApi/bin/Debug/net8.0/Aura.WebApi
 /Users/matias/Desktop/Proyecto/AURA/api/src/Aura.WebApi/bin/Debug/net8.0/Aura.WebApi.deps.json
 /Users/matias/Desktop/Proyecto/AURA/api/src/Aura.WebApi/bin/Debug/net8.0/Aura.WebApi.runtimeconfig.json

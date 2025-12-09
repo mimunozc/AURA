@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+__MACOSX/
+
+# Python envs
+ai/.venv/
+api/.venv/
+api/.pyenv/
+
+# .NET / Visual Studio
+api/.vs/
+**/bin/
+**/obj/
+
+# Node 
+frontend/node_modules/
+frontend/.next/
+
+

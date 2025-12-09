@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -133,24 +134,34 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { service = "aura-api", status = "ok" }));
 
-app.MapPost("/auth/login", (LoginIn input, IConfiguration cfg) =>
+app.MapPost("/auth/login", (LoginIn input) =>
 {
-    var mockSection = cfg.GetSection("Auth");
-    var mockUser = mockSection["MockUser"] ?? "user@aura.cl";
-    var mockPassword = mockSection["MockPassword"] ?? "Demo.1234";
+    var emailNorm = input.email.Trim().ToLowerInvariant();
+    var pwd = input.password;
 
-    if (!string.Equals(input.email, mockUser, StringComparison.OrdinalIgnoreCase) ||
-        input.password != mockPassword)
+    Guid userId;
+    string role;
+
+    if (emailNorm == "user@aura.cl" && pwd == "Demo.1234")
+    {
+        userId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        role = "user";
+    }
+    else if (emailNorm == "specialist@aura.cl" && pwd == "Demo.1234")
+    {
+        userId = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        role = "specialist";
+    }
+    else
     {
         return Results.Unauthorized();
     }
 
-    var userId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-
     var claims = new[]
     {
         new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-        new Claim(JwtRegisteredClaimNames.Email, mockUser)
+        new Claim(JwtRegisteredClaimNames.Email, emailNorm),
+        new Claim("role", role)
     };
 
     var token = new JwtSecurityToken(
@@ -244,8 +255,30 @@ app.MapPost("/chat/send", async (ChatSendIn input, AuraDbContext db, IHttpClient
     db.Messages.Add(assistantMessage);
     await db.SaveChangesAsync();
 
+    var analyzePayload = new
+    {
+        message = input.message
+    };
+
+    var analyzeResponse = await client.PostAsJsonAsync("/analyze", analyzePayload);
+    analyzeResponse.EnsureSuccessStatusCode();
+
+    var analysisJson = await analyzeResponse.Content.ReadAsStringAsync();
+
+    var analysis = new MessageAnalysis
+    {
+        MessageId = assistantMessage.Id,
+        UserId = userId,
+        Json = analysisJson,
+        CreatedAt = assistantMessage.CreatedAt
+    };
+
+    db.MessageAnalyses.Add(analysis);
+    await db.SaveChangesAsync();
+
     return Results.Ok(new { reply });
 }).RequireAuthorization();
+
 
 app.MapGet("/me/overview", async (AuraDbContext db, ClaimsPrincipal user) =>
 {
@@ -448,6 +481,303 @@ app.MapGet("/signals/daily", async (string userId, string dateFrom, string dateT
     return Results.Ok(list);
 });
 
+app.MapGet("/signals/analysis", async (string userId, string dateFrom, string dateTo, AuraDbContext db) =>
+{
+    Guid userGuid;
+
+    if (userId.StartsWith("aura-") && Guid.TryParse(userId.Substring(5), out var g1))
+    {
+        userGuid = g1;
+    }
+    else if (Guid.TryParse(userId, out var g2))
+    {
+        userGuid = g2;
+    }
+    else
+    {
+        return Results.BadRequest("userId inválido");
+    }
+
+    if (!DateOnly.TryParse(dateFrom, out var from) || !DateOnly.TryParse(dateTo, out var to))
+        return Results.BadRequest("Rango de fechas inválido");
+
+    var fromDt = from.ToDateTime(TimeOnly.MinValue);
+    var toDt = to.ToDateTime(TimeOnly.MaxValue);
+
+    var items = await (from ma in db.MessageAnalyses
+                       join m in db.Messages on ma.MessageId equals m.Id
+                       where ma.UserId == userGuid
+                             && m.CreatedAt >= fromDt
+                             && m.CreatedAt <= toDt
+                       select ma.Json).ToListAsync();
+
+    var levelsOrder = new[] { "none", "low", "medium", "high" };
+    var riskSelfHarmMax = "none";
+    var counts = new Dictionary<string, int>();
+
+    foreach (var json in items)
+    {
+        if (string.IsNullOrWhiteSpace(json)) continue;
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (root.TryGetProperty("risk_self_harm", out var r))
+        {
+            var v = r.GetString() ?? "none";
+            if (Array.IndexOf(levelsOrder, v) > Array.IndexOf(levelsOrder, riskSelfHarmMax))
+                riskSelfHarmMax = v;
+        }
+
+        if (root.TryGetProperty("possible_signals", out var arr) && arr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var s in arr.EnumerateArray())
+            {
+                var cat = s.GetProperty("category").GetString() ?? "other";
+                var lvl = s.GetProperty("level").GetString() ?? "none";
+                if (lvl == "none") continue;
+                var key = $"{cat}:{lvl}";
+                counts[key] = counts.TryGetValue(key, out var c) ? c + 1 : 1;
+            }
+        }
+    }
+
+    var topCategories = counts
+        .Select(kvp =>
+        {
+            var parts = kvp.Key.Split(':');
+            return new
+            {
+                category = parts[0],
+                level = parts[1],
+                count = kvp.Value
+            };
+        })
+        .OrderByDescending(x => x.count)
+        .Take(5)
+        .ToList();
+
+    return Results.Ok(new
+    {
+        riskSelfHarmMax,
+        topCategories
+    });
+});
+
+// === Specialist panel ===
+
+app.MapGet("/specialist/users", async (AuraDbContext db) =>
+{
+    var users = await db.Users.ToListAsync();
+
+    var result = new List<SpecialistUserListItem>();
+
+    foreach (var u in users)
+    {
+        var lastCheckin = await db.MoodCheckins
+            .Where(x => x.UserId == u.Id)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        var lastAnalysis = await db.MessageAnalyses
+            .Where(x => x.UserId == u.Id)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        string? riskSelfHarmMax = null;
+        DateTimeOffset? lastAnalysisAt = null;
+
+        if (lastAnalysis != null && !string.IsNullOrWhiteSpace(lastAnalysis.Json))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(lastAnalysis.Json);
+                if (doc.RootElement.TryGetProperty("risk_self_harm", out var rsh))
+                {
+                    riskSelfHarmMax = rsh.GetString();
+                }
+            }
+            catch
+            {
+            }
+
+            lastAnalysisAt = lastAnalysis.CreatedAt;
+        }
+
+        result.Add(new SpecialistUserListItem(
+            u.Id,
+            u.Email,
+            u.DisplayName,
+            u.CreatedAt,
+            lastCheckin != null ? lastCheckin.Mood.ToString() : null,
+            lastCheckin?.CreatedAt,
+            riskSelfHarmMax,
+            lastAnalysisAt
+        ));
+    }
+
+    return Results.Ok(result);
+}).RequireAuthorization();
+
+
+app.MapGet("/specialist/users/{userId:guid}/overview", async (Guid userId, AuraDbContext db) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId);
+    if (user == null) return Results.NotFound();
+
+    var from = DateTimeOffset.UtcNow.AddDays(-30);
+    var to = DateTimeOffset.UtcNow;
+
+    var moodSeries = await db.MoodCheckins
+        .Where(x => x.UserId == userId && x.CreatedAt >= from && x.CreatedAt <= to)
+        .OrderBy(x => x.CreatedAt)
+        .Select(x => new SpecialistMoodPoint(
+            x.CreatedAt,
+            x.Mood
+        ))
+        .ToListAsync();
+
+    var analyses = await db.MessageAnalyses
+        .Where(x => x.UserId == userId)
+        .OrderByDescending(x => x.CreatedAt)
+        .Take(50)
+        .Select(x => new SpecialistAnalysisItem(
+            x.Id,
+            x.CreatedAt,
+            "" 
+        ))
+        .ToListAsync();
+
+    var journals = await db.JournalEntries
+        .Where(x => x.UserId == userId)
+        .OrderByDescending(x => x.CreatedAt)
+        .Take(50)
+        .Select(x => new SpecialistJournalItem(
+            x.Id,
+            x.CreatedAt,
+            ""
+        ))
+        .ToListAsync();
+
+    var clinicalNotes = await db.ClinicalNotes
+        .Where(x => x.UserId == userId)
+        .OrderByDescending(x => x.CreatedAt)
+        .Take(50)
+        .Select(x => new SpecialistNoteItem(
+            x.Id,
+            x.CreatedAt,
+            x.Title,
+            x.Content,
+            x.Tags
+        ))
+        .ToListAsync();
+
+    var overview = new SpecialistUserOverview(
+        user.Id,
+        user.Email,
+        user.DisplayName,
+        moodSeries,
+        analyses,
+        journals,
+        clinicalNotes
+    );
+
+    return Results.Ok(overview);
+}).RequireAuthorization();
+
+
+app.MapPost("/specialist/users/{userId:guid}/notes", async (Guid userId, SpecialistNoteIn input, AuraDbContext db, ClaimsPrincipal principal) =>
+{
+    Guid specialistId;
+    var sub = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(sub, out specialistId))
+    {
+        specialistId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    }
+
+    var note = new ClinicalNote
+    {
+        UserId = userId,
+        SpecialistId = specialistId,
+        CreatedAt = DateTimeOffset.UtcNow,
+        Title = input.title,
+        Content = input.content,
+        Tags = input.tags
+    };
+
+    db.ClinicalNotes.Add(note);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        note.Id,
+        note.UserId,
+        note.SpecialistId,
+        note.CreatedAt,
+        note.Title,
+        note.Content,
+        note.Tags
+    });
+}).RequireAuthorization();
+
+
+app.MapPost("/specialist/users/{userId:guid}/summary", async (Guid userId, AuraDbContext db, IHttpClientFactory httpClientFactory) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId);
+    if (user == null) return Results.NotFound();
+
+    var from = DateTimeOffset.UtcNow.AddDays(-30);
+    var to = DateTimeOffset.UtcNow;
+
+    var moodCheckins = await db.MoodCheckins
+        .Where(x => x.UserId == userId && x.CreatedAt >= from && x.CreatedAt <= to)
+        .OrderBy(x => x.CreatedAt)
+        .ToListAsync();
+
+    var moodLines = moodCheckins
+        .Select(x => $"{x.CreatedAt:yyyy-MM-dd}: mood={x.Mood}, note={x.Note}")
+        .ToList();
+
+    var analyses = await db.MessageAnalyses
+        .Where(x => x.UserId == userId)
+        .OrderByDescending(x => x.CreatedAt)
+        .Take(50)
+        .ToListAsync();
+
+    var alertLines = analyses
+        .Select(a => $"{a.CreatedAt:u} | {a.Json}")
+        .ToList();
+
+    var notes = await db.ClinicalNotes
+        .Where(x => x.UserId == userId)
+        .OrderByDescending(x => x.CreatedAt)
+        .Take(20)
+        .ToListAsync();
+
+    var noteLines = notes
+        .Select(n => $"{n.CreatedAt:u} | {n.Title}: {n.Content}")
+        .ToList();
+
+    var label = user.DisplayName ?? user.Email ?? user.Id.ToString();
+
+    var summary = new
+    {
+        overview = $"Resumen preliminar para {label}.",
+        mood_trend = string.Join("\n", moodLines),
+        risk = "ninguno",
+        key_signals = Array.Empty<string>(),
+        recommendations = new[]
+        {
+            "Configurar y habilitar el resumen automático con la AI.",
+            "Revisar los últimos check-ins y notas clínicas antes de la sesión."
+        }
+    };
+
+    var json = JsonSerializer.Serialize(summary);
+
+    return Results.Ok(new SpecialistSummaryResponse(json));
+}).RequireAuthorization();
+
+
 // === Journal ===
 
 app.MapGet("/journal/list", async (string userId) =>
@@ -510,89 +840,40 @@ app.MapPost("/journal/add", async (JournalAddRequest body) =>
     return Results.Ok(new { id = id.ToString(), ts = ts.ToString("o") });
 });
 
-// === Guía adaptativa (overview básico) ===
 
-app.MapGet("/adaptive/overview", async (string userId) =>
+
+app.MapGet("/specialist/users/{userId:guid}/overview", async (Guid userId, AuraDbContext db) =>
 {
-    await using var conn = new NpgsqlConnection(connectionString);
-    await conn.OpenAsync();
+    var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId);
+    if (user == null) return Results.NotFound();
 
-    long checkins = 0;
-    long journals = 0;
+    var clinicalNotes = await db.ClinicalNotes
+        .Where(x => x.UserId == userId)
+        .OrderByDescending(x => x.CreatedAt)
+        .Take(50)
+        .Select(x => new SpecialistNoteItem(
+            x.Id,
+            x.CreatedAt,
+            x.Title,
+            x.Content,
+            x.Tags
+        ))
+        .ToListAsync();
 
-    const string sqlCheckins = @"SELECT COUNT(*) FROM public.mood_checkins WHERE user_id = @userId;";
-    const string sqlJournals = @"SELECT COUNT(*) FROM public.journal_entries WHERE user_id = @userId;";
-
-    await using (var cmd = new NpgsqlCommand(sqlCheckins, conn))
-    {
-        cmd.Parameters.AddWithValue("userId", userId);
-        checkins = (long)(await cmd.ExecuteScalarAsync() ?? 0L);
-    }
-
-    await using (var cmd = new NpgsqlCommand(sqlJournals, conn))
-    {
-        cmd.Parameters.AddWithValue("userId", userId);
-        journals = (long)(await cmd.ExecuteScalarAsync() ?? 0L);
-    }
-
-    var xpTotal = (int)(checkins * 10 + journals * 5);
-    var level = xpTotal / 50 + 1;
-    var nextLevelXp = (level + 1) * 50;
-
-    var profile = new
-    {
-        level,
-        xpTotal,
-        nextLevelXp
-    };
-
-    var totalSteps = 3;
-    var completedSteps = checkins >= 7 ? 3 : checkins >= 3 ? 2 : checkins > 0 ? 1 : 0;
-    var progress = totalSteps == 0 ? 0.0 : (double)completedSteps / totalSteps;
-
-    var currentTrack = new
-    {
-        id = "getting-started",
-        name = "Primeros pasos con AURA",
-        description = "Crea el hábito de registrar tus emociones y reflexionar a diario.",
-        progress,
-        totalSteps,
-        completedSteps
-    };
-
-    var achievements = new List<object>();
-
-    if (checkins >= 1)
-    {
-        achievements.Add(new
-        {
-            code = "first_checkin",
-            name = "Primer check-in",
-            description = "Registraste tu primer estado emocional.",
-            unlockedAt = DateTime.UtcNow.ToString("o")
-        });
-    }
-
-    if (checkins >= 7)
-    {
-        achievements.Add(new
-        {
-            code = "week_streak",
-            name = "Semana registrada",
-            description = "Llevas al menos 7 días con registros.",
-            unlockedAt = DateTime.UtcNow.ToString("o")
-        });
-    }
-
-    var overview = new
-    {
-        profile,
-        currentTrack,
-        recentAchievements = achievements
-    };
+    var overview = new SpecialistUserOverview(
+        user.Id,
+        user.Email,
+        user.DisplayName,
+        Enumerable.Empty<SpecialistMoodPoint>(),
+        Enumerable.Empty<SpecialistAnalysisItem>(),
+        Enumerable.Empty<SpecialistJournalItem>(),
+        clinicalNotes
+    );
 
     return Results.Ok(overview);
-});
+}).RequireAuthorization();
+
+
 
 app.Run();
 
@@ -613,4 +894,63 @@ public record JournalAddRequest(
     string userId,
     string text
 );
+
+public record SpecialistNoteIn(
+    string title,
+    string content,
+    string? tags
+);
+
+public record SpecialistUserListItem(
+    Guid id,
+    string? email,
+    string? displayName,
+    DateTimeOffset createdAt,
+    string? lastMood,
+    DateTimeOffset? lastMoodDate,
+    string? riskSelfHarmMax,
+    DateTimeOffset? lastAnalysisAt
+);
+
+public record SpecialistMoodPoint(
+    DateTimeOffset date,
+    short mood
+);
+
+public record SpecialistAnalysisItem(
+    long id,
+    DateTimeOffset createdAt,
+    string json
+);
+
+public record SpecialistJournalItem(
+    long id,
+    DateTimeOffset createdAt,
+    string text
+);
+
+public record SpecialistNoteItem(
+    long id,
+    DateTimeOffset createdAt,
+    string title,
+    string content,
+    string? tags
+);
+
+public record SpecialistUserOverview(
+    Guid id,
+    string? email,
+    string? displayName,
+    IEnumerable<SpecialistMoodPoint> moodSeries,
+    IEnumerable<SpecialistAnalysisItem> analyses,
+    IEnumerable<SpecialistJournalItem> journals,
+    IEnumerable<SpecialistNoteItem> clinicalNotes
+);
+
+public record SpecialistSummaryResponse(string? summary_json);
+
+
+
+
+
 

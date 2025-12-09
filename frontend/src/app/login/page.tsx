@@ -12,7 +12,7 @@ export default function LoginPage() {
   useEffect(() => {
     const saved = localStorage.getItem("aura_dev_email");
     if (saved) setEmail(saved);
-    else setEmail(`demo+${Date.now()}@aura.cl`);
+    else setEmail("user@aura.cl");
   }, []);
 
   async function doLogin() {
@@ -31,13 +31,21 @@ export default function LoginPage() {
       }
 
       const j = await res.json();
+      const role = email.toLowerCase().startsWith("specialist@") ? "specialist" : "user";
+      localStorage.setItem("aura_role", role);
       localStorage.setItem("aura_token", j.token);
       localStorage.setItem("aura_dev_email", email);
-      r.push("/chat");
+
+      if (role === "specialist") {
+        r.push("/specialist");
+      } else {
+        r.push("/chat");
+      }
     } finally {
       setLoading(false);
     }
   }
+
 
   return (
     <div className="min-h-dvh flex items-center justify-center bg-slate-950 text-white">
